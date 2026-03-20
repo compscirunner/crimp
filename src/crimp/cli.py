@@ -34,10 +34,19 @@ def build(manifest, output, dry_run):
         console.print(f"[red]Error:[/red] {e}")
         raise SystemExit(1)
 
+    output_dir = Path(output)
     console.print(f"[green]✓[/green] Manifest valid: [bold]{m.project.name}[/bold] (crimp {m.crimp_version})")
     console.print(f"  {len(m.components)} components, {len(m.connections)} connections")
     console.print()
-    console.print("[yellow]build: generators not yet implemented[/yellow]")
+
+    from crimp.generators import pinout as pinout_gen
+
+    if dry_run:
+        console.print("[dim]dry-run: would write pinout docs[/dim]")
+        console.print(f"  pinout/index.md + {len(m.components)} component files → {output_dir}/pinout/")
+    else:
+        written = pinout_gen.generate(m, output_dir)
+        console.print(f"[green]✓[/green] Pinout docs: {len(written)} files → [bold]{output_dir}/pinout/[/bold]")
 
 
 @cli.command()

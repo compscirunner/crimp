@@ -65,6 +65,14 @@ def build(manifest, output, dry_run):
         comm = comm_gen.generate(m, output_dir)
         console.print(f"[green]✓[/green] Commissioning tests: {tested} tests → [bold]{comm}[/bold]")
 
+        try:
+            from crimp.generators import wireviz_gen
+            diagrams = wireviz_gen.generate(m, output_dir)
+            svg_count = sum(1 for p in diagrams if p.suffix == ".svg")
+            console.print(f"[green]✓[/green] Wiring diagrams: {svg_count} SVGs → [bold]{output_dir}/diagrams/[/bold]")
+        except RuntimeError:
+            console.print("[dim]  (wiring diagrams skipped — wireviz not installed)[/dim]")
+
 
 @cli.command()
 @click.argument("manifest", type=click.Path(exists=True))
@@ -92,6 +100,38 @@ def validate(manifest):
         for comp_id, comp in m.components.items():
             table.add_row(comp_id, comp.name, comp.type, str(len(comp.pins)))
         console.print(table)
+
+
+@cli.command()
+@click.argument("manifest", type=click.Path(exists=True))
+@click.option("--host", default="0.0.0.0", help="Host to bind (default: all interfaces).")
+@click.option("--port", default=8000, help="Port to listen on (default: 8000).")
+def serve(manifest, host, port):
+    """Run the interactive commissioning web UI.
+
+    Loads MANIFEST and serves a guided step-by-step assembly checklist.
+    Open http://<this-machine>:PORT in your browser to start commissioning.
+    """
+    try:
+        import uvicorn
+    except ImportError:
+        console.print("[red]Error:[/red] uvicorn not installed. Run: pip install 'crimp-manifest[serve]'")
+        raise SystemExit(1)
+
+    try:
+        m = load(manifest)
+    except ManifestError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise SystemExit(1)
+
+    from crimp.server import create_app
+
+    console.print(f"[green]✓[/green] Manifest: [bold]{m.project.name}[/bold] — {len(m.connections)} connections")
+    console.print(f"[green]✓[/green] Serving at [bold]http://{host}:{port}[/bold]  (Ctrl-C to stop)")
+    console.print()
+
+    app = create_app(m)
+    uvicorn.run(app, host=host, port=port, log_level="warning")
 
 
 @cli.command()

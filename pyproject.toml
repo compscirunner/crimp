@@ -18,7 +18,8 @@ dependencies = [
 
 [project.optional-dependencies]
 diagrams = ["wireviz"]
-dev = ["pytest", "pytest-cov", "ruff"]
+serve = ["fastapi>=0.111", "uvicorn[standard]>=0.29", "python-multipart>=0.0.9"]
+dev = ["pytest", "pytest-cov", "ruff", "fastapi>=0.111", "uvicorn[standard]>=0.29", "python-multipart>=0.0.9", "httpx>=0.27"]
 
 [project.scripts]
 crimp = "crimp.cli:cli"

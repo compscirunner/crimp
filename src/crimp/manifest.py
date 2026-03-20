@@ -159,6 +159,43 @@ def validate_raw(data: dict) -> None:
         raise ManifestError("Manifest validation failed:\n" + "\n".join(messages))
 
 
+def validate_refs(data: dict) -> None:
+    """Check referential integrity: connections must reference valid components and pins.
+
+    Also checks wire_standards refs and voltage_rail refs.
+    Raises ManifestError listing all broken references found.
+    """
+    errors = []
+    components = data.get("components", {})
+    wire_standards = data.get("wire_standards", {})
+    power_rails = data.get("power_rails", {})
+
+    for i, conn in enumerate(data.get("connections", [])):
+        conn_id = conn.get("id", f"connections[{i}]")
+
+        for side in ("from", "to"):
+            endpoint = conn.get(side, {})
+            comp_id = endpoint.get("component")
+            pin_id = endpoint.get("pin")
+            if comp_id not in components:
+                errors.append(f"  connection '{conn_id}' {side}.component: '{comp_id}' not found in components")
+            elif pin_id not in components[comp_id].get("pins", {}):
+                errors.append(f"  connection '{conn_id}' {side}.pin: '{pin_id}' not found in {comp_id}.pins")
+
+        wire_ref = conn.get("wire", {}).get("ref")
+        if wire_ref and wire_ref not in wire_standards:
+            errors.append(f"  connection '{conn_id}' wire.ref: '{wire_ref}' not found in wire_standards")
+
+    for comp_id, comp in components.items():
+        for pin_id, pin in comp.get("pins", {}).items():
+            rail_ref = pin.get("voltage_rail")
+            if rail_ref and rail_ref not in power_rails:
+                errors.append(f"  component '{comp_id}' pin '{pin_id}' voltage_rail: '{rail_ref}' not found in power_rails")
+
+    if errors:
+        raise ManifestError("Referential integrity check failed:\n" + "\n".join(errors))
+
+
 def _parse(data: dict) -> Manifest:
     """Convert a validated raw manifest dict into a typed Manifest."""
 
@@ -310,4 +347,5 @@ def load(path: Path | str) -> Manifest:
         raise ManifestError(f"Invalid JSON in manifest: {e}") from e
 
     validate_raw(data)
+    validate_refs(data)
     return _parse(data)

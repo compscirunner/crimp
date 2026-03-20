@@ -1,0 +1,2715 @@
+{
+  "crimp_version": "0.1.0",
+  "project": {
+    "name": "Scout Robot",
+    "description": "Hobby autonomous ground robot. Jetson Orin Nano main compute, Pi 4 ROS2 bridge, Pico micro-ROS I/O. 12V LiFePO4 power, RTK GPS, depth cameras, closed-loop steering.",
+    "revision": "0.1-rewire",
+    "notes": "This manifest is the single source of truth for Scout wiring. AI maintains it. Do not hand-edit generated docs."
+  },
+  "wire_standards": {
+    "power_10awg_red": {
+      "gauge_awg": 10,
+      "color": "red",
+      "notes": "Main 12V power runs"
+    },
+    "power_10awg_black": {
+      "gauge_awg": 10,
+      "color": "black",
+      "notes": "Main GND runs"
+    },
+    "power_18awg_red": {
+      "gauge_awg": 18,
+      "color": "red",
+      "notes": "12V branch runs to loads"
+    },
+    "power_18awg_black": {
+      "gauge_awg": 18,
+      "color": "black",
+      "notes": "GND branch runs"
+    },
+    "signal_22awg_red": {
+      "gauge_awg": 22,
+      "color": "red",
+      "notes": "5V logic power"
+    },
+    "signal_22awg_black": {
+      "gauge_awg": 22,
+      "color": "black",
+      "notes": "Signal GND"
+    },
+    "signal_26awg_red": {
+      "gauge_awg": 26,
+      "color": "red",
+      "notes": "3.3V logic power"
+    },
+    "signal_26awg_black": {
+      "gauge_awg": 26,
+      "color": "black",
+      "notes": "Logic GND"
+    },
+    "signal_26awg_blue": {
+      "gauge_awg": 26,
+      "color": "blue",
+      "notes": "I2C SDA / data"
+    },
+    "signal_26awg_yellow": {
+      "gauge_awg": 26,
+      "color": "yellow",
+      "notes": "I2C SCL / clock"
+    },
+    "signal_26awg_white": {
+      "gauge_awg": 26,
+      "color": "white",
+      "notes": "General signal"
+    },
+    "signal_26awg_orange": {
+      "gauge_awg": 26,
+      "color": "orange",
+      "notes": "PWM output"
+    }
+  },
+  "power_rails": {
+    "12v_main": {
+      "voltage_nominal": 12,
+      "source_component": "bp65",
+      "max_current_a": 65,
+      "notes": "Protected 12V rail from BP-65 output. All loads except Jetson (which may run direct from bus bar)."
+    },
+    "5v_logic": {
+      "voltage_nominal": 5,
+      "source_component": "step_down_5v",
+      "max_current_a": 10,
+      "notes": "5V logic rail for Pi4, Pico (VSYS), relay board."
+    },
+    "3v3_pico": {
+      "voltage_nominal": 3.3,
+      "source_component": "pico",
+      "max_current_a": 0.3,
+      "notes": "3.3V from Pico 3V3_OUT. Powers AS5600 encoders only."
+    }
+  },
+  "components": {
+    "jetson": {
+      "name": "Jetson Orin Nano 8GB",
+      "type": "computer",
+      "description": "Main compute. Runs ROS2, perception stack. Powers directly from 12V bus.",
+      "voltage_logic": 12,
+      "notes": "Power input: 9-20V DC barrel jack. Ethernet to UniFi switch.",
+      "pins": {
+        "12v_in": {
+          "function": "12V power input",
+          "signal_type": "power",
+          "direction": "in",
+          "physical_label": "DC IN"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "eth": {
+          "function": "Gigabit Ethernet",
+          "signal_type": "ethernet",
+          "direction": "bidir",
+          "physical_label": "GbE"
+        },
+        "usb_a_1": {
+          "function": "USB 3.0 Type-A",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "usb_a_2": {
+          "function": "USB 3.0 Type-A",
+          "signal_type": "usb",
+          "direction": "bidir"
+        }
+      }
+    },
+    "pi4": {
+      "name": "Raspberry Pi 4 8GB",
+      "type": "computer",
+      "description": "ROS2 bridge. Manages GPS corrections, Pico reset, hazcam pipeline. Connects to UniFi switch and 7-port USB hub.",
+      "voltage_logic": 5,
+      "notes": "Powered via USB-C 5V. Ethernet to UniFi switch. GPIO pin used to reset Pico.",
+      "pins": {
+        "usbc_power": {
+          "function": "5V USB-C power input",
+          "signal_type": "power",
+          "direction": "in",
+          "physical_label": "USB-C"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "eth": {
+          "function": "Gigabit Ethernet",
+          "signal_type": "ethernet",
+          "direction": "bidir",
+          "physical_label": "GbE"
+        },
+        "usb_a_1": {
+          "function": "USB 3.0 Type-A \u2192 hub",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "usb_a_2": {
+          "function": "USB 3.0 Type-A \u2192 Pico",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "usb_a_3": {
+          "function": "USB 3.0 Type-A \u2192 OAK-D",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "gpio_pico_reset": {
+          "function": "GPIO \u2192 Pico RUN (reset)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GPIO17",
+          "notes": "Drive LOW to reset Pico. Use 1k\u03a9 series resistor."
+        }
+      }
+    },
+    "pico": {
+      "name": "Raspberry Pi Pico (micro-ROS)",
+      "type": "mcu",
+      "description": "Low-level I/O controller. Runs micro-ROS over USB serial to Pi4. Controls encoders, relay board, headlights, signal tower, RC input.",
+      "voltage_logic": 3.3,
+      "notes": "Powered via VSYS from 5V step-down. USB to Pi4 for micro-ROS. RUN pin wired to Pi4 GPIO for automated flashing.",
+      "pins": {
+        "GP0": {
+          "function": "SPARE",
+          "signal_type": "nc",
+          "direction": "nc"
+        },
+        "GP1": {
+          "function": "SPARE",
+          "signal_type": "nc",
+          "direction": "nc"
+        },
+        "GP2": {
+          "function": "SPARE",
+          "signal_type": "nc",
+          "direction": "nc"
+        },
+        "GP3": {
+          "function": "SPARE",
+          "signal_type": "nc",
+          "direction": "nc"
+        },
+        "GP4": {
+          "function": "I2C0 SDA \u2014 Encoder left",
+          "signal_type": "i2c_sda",
+          "direction": "bidir",
+          "physical_label": "GP4"
+        },
+        "GP5": {
+          "function": "I2C0 SCL \u2014 Encoder left",
+          "signal_type": "i2c_scl",
+          "direction": "out",
+          "physical_label": "GP5"
+        },
+        "GP6": {
+          "function": "I2C1 SDA \u2014 Encoder right",
+          "signal_type": "i2c_sda",
+          "direction": "bidir",
+          "physical_label": "GP6"
+        },
+        "GP7": {
+          "function": "I2C1 SCL \u2014 Encoder right",
+          "signal_type": "i2c_scl",
+          "direction": "out",
+          "physical_label": "GP7"
+        },
+        "GP8": {
+          "function": "SPARE",
+          "signal_type": "nc",
+          "direction": "nc"
+        },
+        "GP9": {
+          "function": "UART1 RX \u2014 iBUS from RC receiver",
+          "signal_type": "uart_rx",
+          "direction": "in",
+          "physical_label": "GP9"
+        },
+        "GP10": {
+          "function": "Relay 1 (active-low)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GP10"
+        },
+        "GP11": {
+          "function": "Relay 2 (active-low)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GP11"
+        },
+        "GP12": {
+          "function": "Relay 3 (active-low)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GP12"
+        },
+        "GP13": {
+          "function": "Relay 4 (active-low)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GP13"
+        },
+        "GP14": {
+          "function": "Relay 5 (active-low)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GP14"
+        },
+        "GP15": {
+          "function": "Relay 6 (active-low)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GP15"
+        },
+        "GP16": {
+          "function": "Relay 7 (active-low)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GP16"
+        },
+        "GP17": {
+          "function": "Relay 8 (active-low)",
+          "signal_type": "digital_out",
+          "direction": "out",
+          "physical_label": "GP17"
+        },
+        "GP18": {
+          "function": "PWM \u2014 Headlight left",
+          "signal_type": "pwm",
+          "direction": "out",
+          "physical_label": "GP18"
+        },
+        "GP19": {
+          "function": "PWM \u2014 Headlight right",
+          "signal_type": "pwm",
+          "direction": "out",
+          "physical_label": "GP19"
+        },
+        "GP20": {
+          "function": "PWM \u2014 Signal tower layer 1",
+          "signal_type": "pwm",
+          "direction": "out",
+          "physical_label": "GP20"
+        },
+        "GP21": {
+          "function": "PWM \u2014 Signal tower layer 2",
+          "signal_type": "pwm",
+          "direction": "out",
+          "physical_label": "GP21"
+        },
+        "GP22": {
+          "function": "PWM \u2014 Signal tower buzzer",
+          "signal_type": "pwm",
+          "direction": "out",
+          "physical_label": "GP22"
+        },
+        "GP26": {
+          "function": "SPARE (ADC capable)",
+          "signal_type": "analog_in",
+          "direction": "nc"
+        },
+        "GP27": {
+          "function": "SPARE (ADC capable)",
+          "signal_type": "analog_in",
+          "direction": "nc"
+        },
+        "GP28": {
+          "function": "SPARE (ADC capable)",
+          "signal_type": "analog_in",
+          "direction": "nc"
+        },
+        "RUN": {
+          "function": "Pico reset input",
+          "signal_type": "reset",
+          "direction": "in",
+          "physical_label": "RUN",
+          "notes": "Drive LOW to reset. 1k\u03a9 series resistor from Pi4 GPIO."
+        },
+        "VSYS": {
+          "function": "5V system power input",
+          "signal_type": "power",
+          "direction": "in",
+          "physical_label": "VSYS (pin 39)",
+          "voltage_rail": "5v_logic"
+        },
+        "3V3_OUT": {
+          "function": "3.3V power output",
+          "signal_type": "power",
+          "direction": "power",
+          "physical_label": "3V3 OUT (pin 36)",
+          "voltage_rail": "3v3_pico"
+        },
+        "GND": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "USB": {
+          "function": "USB \u2014 micro-ROS to Pi4",
+          "signal_type": "usb",
+          "direction": "bidir",
+          "physical_label": "USB"
+        }
+      }
+    },
+    "pololu_24v12": {
+      "name": "Pololu Simple High-Power Motor Controller 24v12",
+      "type": "motor_controller",
+      "description": "Drive motor controller. USB control from Pi4 via 7-port hub. RC input direct from receiver for hardware E-stop.",
+      "notes": "USB connection: /dev/serial/by-id/usb-Pololu_Corporation_Pololu_Simple_High-Power_Motor_Controller_24v12_*",
+      "pins": {
+        "usb": {
+          "function": "USB control interface",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "vin": {
+          "function": "12V motor power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "12v_main"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "motor_a": {
+          "function": "Motor output A",
+          "signal_type": "motor_power",
+          "direction": "out"
+        },
+        "motor_b": {
+          "function": "Motor output B",
+          "signal_type": "motor_power",
+          "direction": "out"
+        },
+        "rc_in": {
+          "function": "RC PWM input (hardware E-stop channel)",
+          "signal_type": "pwm",
+          "direction": "in",
+          "notes": "Direct from FS-iA10B receiver. Hardware stop independent of software."
+        }
+      }
+    },
+    "pololu_jrk_g2": {
+      "name": "Pololu Jrk G2 21v3",
+      "type": "motor_controller",
+      "description": "Steering motor controller. Closed-loop position control via feedback potentiometer. USB control from Pi4.",
+      "notes": "USB: /dev/serial/by-id/usb-Pololu_Corporation_Pololu_Jrk_G2_21v3_* (two interfaces: command + feedback). I2C address configurable.",
+      "pins": {
+        "usb": {
+          "function": "USB control interface (2 ACM ports)",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "vin": {
+          "function": "12V motor power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "12v_main"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "motor_a": {
+          "function": "Motor output A",
+          "signal_type": "motor_power",
+          "direction": "out"
+        },
+        "motor_b": {
+          "function": "Motor output B",
+          "signal_type": "motor_power",
+          "direction": "out"
+        },
+        "feedback": {
+          "function": "Analog feedback input (steering pot)",
+          "signal_type": "analog_in",
+          "direction": "in",
+          "notes": "0\u20135V analog from linear pot. Jrk uses this for closed-loop position control."
+        }
+      }
+    },
+    "battery": {
+      "name": "12V 100Ah LiFePO4 Battery",
+      "type": "power",
+      "description": "Main power source. Built-in 100A BMS. 12V nominal.",
+      "notes": "Connected via 10AWG XT60 with physical disconnect. 40A inline fuse on positive lead.",
+      "pins": {
+        "pos": {
+          "function": "Battery positive terminal",
+          "signal_type": "power",
+          "direction": "power"
+        },
+        "neg": {
+          "function": "Battery negative terminal",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "inline_fuse_40a": {
+      "name": "40A Inline Fuse",
+      "type": "passive",
+      "description": "Overcurrent protection on battery positive lead.",
+      "pins": {
+        "in": {
+          "function": "Fuse input (battery side)",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "out": {
+          "function": "Fuse output (bus bar side)",
+          "signal_type": "power",
+          "direction": "out"
+        }
+      }
+    },
+    "xt60_disconnect": {
+      "name": "XT60 Battery Disconnect",
+      "type": "connector",
+      "description": "Physical battery disconnect. 10AWG XT60 connector pair allows battery removal without tools.",
+      "notes": "Male connector on battery side, female on harness side.",
+      "pins": {
+        "pos": {
+          "function": "Positive",
+          "signal_type": "power",
+          "direction": "bidir"
+        },
+        "neg": {
+          "function": "Negative/GND",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "bus_bar": {
+      "name": "Bussmann Stud-Type Bus Bar",
+      "type": "passive",
+      "description": "Main positive and negative distribution point. Ring terminals bolted to each stud. Two studs: positive and negative.",
+      "notes": "Torque fasteners per Bussmann spec label. Positive stud feeds BP-65 and Jetson 12V. Negative stud is common chassis ground.",
+      "pins": {
+        "pos_stud": {
+          "function": "Positive distribution stud",
+          "signal_type": "power",
+          "direction": "bidir"
+        },
+        "neg_stud": {
+          "function": "Negative/GND distribution stud",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "bp65": {
+      "name": "Victron BatteryProtect BP-65",
+      "type": "power",
+      "description": "Primary load disconnect. Protects battery from over-discharge. H/L pin is E-stop signal input.",
+      "notes": "H/L remote pin: connect to B- to disconnect loads. Normally open-circuit (loads connected). E-stop wiring TBD \u2014 not yet wired.",
+      "pins": {
+        "in_pos": {
+          "function": "Input positive (from bus bar)",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "12v_main"
+        },
+        "in_neg": {
+          "function": "Input negative (GND)",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "out_pos": {
+          "function": "Output positive (to loads)",
+          "signal_type": "power",
+          "direction": "out",
+          "voltage_rail": "12v_main"
+        },
+        "hl_pin": {
+          "function": "Remote H/L \u2014 E-stop signal input",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Connect to B- to disconnect loads (turn off). Normally floating = loads on. E-stop N.C. contact wiring TBD."
+        }
+      }
+    },
+    "battery_sense": {
+      "name": "Victron Smart Battery Sense",
+      "type": "sensor",
+      "description": "Wireless voltage and temperature sensor. Connects to battery terminals. Reports via Bluetooth to Victron app.",
+      "notes": "No wired data connection to compute stack. Bluetooth only.",
+      "pins": {
+        "pos": {
+          "function": "Battery positive sense",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "neg": {
+          "function": "Battery negative sense",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "step_down_5v": {
+      "name": "5V/10A DC-DC Step-Down Converter",
+      "type": "power",
+      "description": "Converts 12V to 5V/10A for Pi4, Pico (VSYS), and relay board.",
+      "pins": {
+        "vin": {
+          "function": "12V input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "12v_main"
+        },
+        "gnd_in": {
+          "function": "GND input",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "vout": {
+          "function": "5V output",
+          "signal_type": "power",
+          "direction": "out",
+          "voltage_rail": "5v_logic"
+        },
+        "gnd_out": {
+          "function": "GND output",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "charger": {
+      "name": "Victron Blue Smart Charger IP65 12V/15A",
+      "type": "power",
+      "description": "In-place shore power battery charger. 120VAC in, 12V/15A out. Bluetooth monitoring.",
+      "notes": "Connected to NOCO GCP1 AC inlet. Charges battery directly while robot is stationary.",
+      "pins": {
+        "ac_in": {
+          "function": "120VAC input from shore inlet",
+          "signal_type": "ac_power",
+          "direction": "in"
+        },
+        "dc_pos": {
+          "function": "12V DC charge output +",
+          "signal_type": "power",
+          "direction": "out"
+        },
+        "dc_neg": {
+          "function": "12V DC charge output \u2212",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "shore_inlet": {
+      "name": "NOCO GCP1 15A AC Inlet",
+      "type": "connector",
+      "description": "NEMA 5-15R waterproof shore power inlet. Mounts to chassis. Feeds charger.",
+      "pins": {
+        "hot": {
+          "function": "120VAC hot",
+          "signal_type": "ac_power",
+          "direction": "in"
+        },
+        "neutral": {
+          "function": "120VAC neutral",
+          "signal_type": "ac_power",
+          "direction": "in"
+        },
+        "ground": {
+          "function": "AC safety ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "usb_charger": {
+      "name": "Coolgear 75W Dual USB Charger (USB-A + USB-C PD)",
+      "type": "power",
+      "description": "Field laptop/device charging. 12V input, USB-A and USB-C PD output. QC4.0/PPS support.",
+      "pins": {
+        "vin": {
+          "function": "12V input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "12v_main"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "usb_a": {
+          "function": "USB-A output",
+          "signal_type": "power",
+          "direction": "out"
+        },
+        "usb_c": {
+          "function": "USB-C PD output",
+          "signal_type": "power",
+          "direction": "out"
+        }
+      }
+    },
+    "unifi_switch": {
+      "name": "Ubiquiti UniFi USW Flex Mini (5-Port GbE)",
+      "type": "other",
+      "description": "Managed gigabit switch. Distributes network to Jetson, Pi4, and UniFi AP.",
+      "notes": "Powered via PoE from AP or 5V USB-C. Connect 5V if not using PoE.",
+      "pins": {
+        "port1": {
+          "function": "Uplink to UniFi AP",
+          "signal_type": "ethernet",
+          "direction": "bidir"
+        },
+        "port2": {
+          "function": "To Jetson Orin Nano",
+          "signal_type": "ethernet",
+          "direction": "bidir"
+        },
+        "port3": {
+          "function": "To Raspberry Pi 4",
+          "signal_type": "ethernet",
+          "direction": "bidir"
+        },
+        "port4": {
+          "function": "SPARE",
+          "signal_type": "ethernet",
+          "direction": "nc"
+        },
+        "port5": {
+          "function": "SPARE",
+          "signal_type": "ethernet",
+          "direction": "nc"
+        }
+      }
+    },
+    "unifi_ap": {
+      "name": "Ubiquiti UAP-AC-M-US UniFi AC Mesh AP",
+      "type": "radio",
+      "description": "Primary WiFi uplink. Mesh capable. Connected to UniFi switch port 1.",
+      "pins": {
+        "eth": {
+          "function": "Gigabit Ethernet to switch",
+          "signal_type": "ethernet",
+          "direction": "bidir"
+        }
+      }
+    },
+    "usb_hub": {
+      "name": "7-Port USB 3.0 Hub (powered)",
+      "type": "other",
+      "description": "Powered USB 3.0 hub connected to Pi4. Distributes USB to hazcams, motor controllers, and DSO-2090.",
+      "notes": "Hub-powered. Connected to Pi4 USB-A port. Motor controllers and hazcams share this hub.",
+      "pins": {
+        "upstream": {
+          "function": "USB upstream to Pi4",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "port1": {
+          "function": "Pololu Simple 24v12 (drive)",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "port2": {
+          "function": "Pololu Jrk G2 (steering)",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "port3": {
+          "function": "PS3 Eye hazcam 1",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "port4": {
+          "function": "PS3 Eye hazcam 2",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "port5": {
+          "function": "PS3 Eye hazcam 3",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "port6": {
+          "function": "DSO-2090 oscilloscope",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "port7": {
+          "function": "SPARE",
+          "signal_type": "nc",
+          "direction": "nc"
+        },
+        "pwr_in": {
+          "function": "Hub power input (5V)",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "5v_logic"
+        }
+      }
+    },
+    "oak_d": {
+      "name": "OAK-D Depth Camera",
+      "type": "sensor",
+      "description": "Stereo depth camera with built-in IMU. USB 3.0 to Pi4 direct (not via hub \u2014 bandwidth).",
+      "pins": {
+        "usb": {
+          "function": "USB 3.0 to Pi4",
+          "signal_type": "usb",
+          "direction": "bidir"
+        }
+      }
+    },
+    "ps3_eye_1": {
+      "name": "PS3 Eye Camera (Hazcam 1)",
+      "type": "sensor",
+      "description": "Forward-left hazard camera.",
+      "pins": {
+        "usb": {
+          "function": "USB to hub port 3",
+          "signal_type": "usb",
+          "direction": "bidir"
+        }
+      }
+    },
+    "ps3_eye_2": {
+      "name": "PS3 Eye Camera (Hazcam 2)",
+      "type": "sensor",
+      "description": "Forward-right hazard camera.",
+      "pins": {
+        "usb": {
+          "function": "USB to hub port 4",
+          "signal_type": "usb",
+          "direction": "bidir"
+        }
+      }
+    },
+    "ps3_eye_3": {
+      "name": "PS3 Eye Camera (Hazcam 3)",
+      "type": "sensor",
+      "description": "Rear hazard camera.",
+      "pins": {
+        "usb": {
+          "function": "USB to hub port 5",
+          "signal_type": "usb",
+          "direction": "bidir"
+        }
+      }
+    },
+    "logitech_c910": {
+      "name": "Logitech HD Webcam C910",
+      "type": "sensor",
+      "description": "General purpose camera. USB to Jetson.",
+      "pins": {
+        "usb": {
+          "function": "USB to Jetson",
+          "signal_type": "usb",
+          "direction": "bidir"
+        }
+      }
+    },
+    "clearview": {
+      "name": "ClearVIEW HD-USB",
+      "type": "other",
+      "description": "FPV video system. Connection mode TBD: USB camera or IP stream.",
+      "notes": "TBD: decide USB vs IP mode before wiring.",
+      "pins": {
+        "usb": {
+          "function": "USB (if USB camera mode)",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "eth": {
+          "function": "Ethernet (if IP mode)",
+          "signal_type": "ethernet",
+          "direction": "bidir"
+        }
+      }
+    },
+    "as5600_left": {
+      "name": "AS5600 Magnetic Encoder (Left Drive Motor)",
+      "type": "sensor",
+      "description": "12-bit magnetic rotary position encoder on left drive motor. I2C address 0x36 on I2C0.",
+      "voltage_logic": 3.3,
+      "connector": {
+        "type": "JST-PH-4",
+        "position": "component_side",
+        "pin_order": [
+          "VCC",
+          "GND",
+          "SDA",
+          "SCL"
+        ]
+      },
+      "pins": {
+        "VCC": {
+          "function": "3.3V power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "3v3_pico"
+        },
+        "GND": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "SDA": {
+          "function": "I2C data (I2C0)",
+          "signal_type": "i2c_sda",
+          "direction": "bidir",
+          "notes": "I2C address 0x36. 4.7k\u03a9 pull-up to 3.3V required on bus."
+        },
+        "SCL": {
+          "function": "I2C clock (I2C0)",
+          "signal_type": "i2c_scl",
+          "direction": "in"
+        }
+      }
+    },
+    "as5600_right": {
+      "name": "AS5600 Magnetic Encoder (Right Drive Motor)",
+      "type": "sensor",
+      "description": "12-bit magnetic rotary position encoder on right drive motor. I2C address 0x36 on I2C1 (separate bus from left).",
+      "voltage_logic": 3.3,
+      "connector": {
+        "type": "JST-PH-4",
+        "position": "component_side",
+        "pin_order": [
+          "VCC",
+          "GND",
+          "SDA",
+          "SCL"
+        ]
+      },
+      "pins": {
+        "VCC": {
+          "function": "3.3V power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "3v3_pico"
+        },
+        "GND": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "SDA": {
+          "function": "I2C data (I2C1)",
+          "signal_type": "i2c_sda",
+          "direction": "bidir",
+          "notes": "I2C address 0x36. Separate bus from left encoder. 4.7k\u03a9 pull-up to 3.3V required."
+        },
+        "SCL": {
+          "function": "I2C clock (I2C1)",
+          "signal_type": "i2c_scl",
+          "direction": "in"
+        }
+      }
+    },
+    "steering_pot": {
+      "name": "Linear Sliding Potentiometer (Steering Feedback)",
+      "type": "sensor",
+      "description": "Analog position feedback for steering. Wiper output feeds Jrk G2 analog feedback input for closed-loop control.",
+      "pins": {
+        "vcc": {
+          "function": "Reference voltage input (5V)",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "wiper": {
+          "function": "Analog position output (0\u20135V)",
+          "signal_type": "analog_out",
+          "direction": "out",
+          "notes": "Wired directly to Jrk G2 feedback input."
+        }
+      }
+    },
+    "rtk_rover_1": {
+      "name": "simpleRTK2B Lite (Rover \u2014 Primary/Heading)",
+      "type": "sensor",
+      "description": "RTK GPS rover module. One of two mounted on Scout for moving baseline heading. Connects to Pi4 via FTDI USB-serial.",
+      "notes": "Moving baseline pair with rtk_rover_2. Provides centimeter-level heading.",
+      "pins": {
+        "usb_ftdi": {
+          "function": "USB-serial via FTDI to Pi4",
+          "signal_type": "uart_rx",
+          "direction": "bidir"
+        },
+        "vin": {
+          "function": "5V power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "5v_logic"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "rtk_rover_2": {
+      "name": "simpleRTK2B Lite (Rover \u2014 Secondary/Position)",
+      "type": "sensor",
+      "description": "Second RTK GPS rover module. Moving baseline pair with rtk_rover_1 for heading + absolute position. Connects to Pi4 via FTDI.",
+      "pins": {
+        "usb_ftdi": {
+          "function": "USB-serial via FTDI to Pi4",
+          "signal_type": "uart_rx",
+          "direction": "bidir"
+        },
+        "vin": {
+          "function": "5V power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "5v_logic"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "rc_receiver": {
+      "name": "Flysky FS-iA10B RC Receiver",
+      "type": "sensor",
+      "description": "10-channel 2.4GHz AFHDS 2A receiver. iBUS output to Pico. One PWM channel wired direct to Pololu 24v12 as hardware E-stop.",
+      "notes": "Powered from 5V. iBUS is single-wire serial at 115200 baud.",
+      "pins": {
+        "ibus": {
+          "function": "iBUS serial output \u2192 Pico GP9",
+          "signal_type": "uart_tx",
+          "direction": "out"
+        },
+        "pwm_ch6": {
+          "function": "PWM E-stop channel \u2192 Pololu 24v12 RC input",
+          "signal_type": "pwm",
+          "direction": "out",
+          "notes": "Hardware E-stop. Direct to motor controller, bypasses software entirely."
+        },
+        "vcc": {
+          "function": "5V power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "5v_logic"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "transistor_board": {
+      "name": "Custom Transistor Board",
+      "type": "other",
+      "description": "Custom PCB using transistors to switch 12V loads from Pico 3.3V PWM signals. Powers headlights and signal tower.",
+      "notes": "5 channels. Input: 3.3V PWM from Pico. Output: 12V switched to load. Each channel is PWM-capable.",
+      "pins": {
+        "ch1_in": {
+          "function": "Channel 1 PWM input (headlight left)",
+          "signal_type": "pwm",
+          "direction": "in"
+        },
+        "ch2_in": {
+          "function": "Channel 2 PWM input (headlight right)",
+          "signal_type": "pwm",
+          "direction": "in"
+        },
+        "ch3_in": {
+          "function": "Channel 3 PWM input (signal tower L1)",
+          "signal_type": "pwm",
+          "direction": "in"
+        },
+        "ch4_in": {
+          "function": "Channel 4 PWM input (signal tower L2)",
+          "signal_type": "pwm",
+          "direction": "in"
+        },
+        "ch5_in": {
+          "function": "Channel 5 PWM input (signal tower buzzer)",
+          "signal_type": "pwm",
+          "direction": "in"
+        },
+        "ch1_out": {
+          "function": "Channel 1 12V output \u2192 headlight left",
+          "signal_type": "power",
+          "direction": "out"
+        },
+        "ch2_out": {
+          "function": "Channel 2 12V output \u2192 headlight right",
+          "signal_type": "power",
+          "direction": "out"
+        },
+        "ch3_out": {
+          "function": "Channel 3 12V output \u2192 signal tower L1",
+          "signal_type": "power",
+          "direction": "out"
+        },
+        "ch4_out": {
+          "function": "Channel 4 12V output \u2192 signal tower L2",
+          "signal_type": "power",
+          "direction": "out"
+        },
+        "ch5_out": {
+          "function": "Channel 5 12V output \u2192 signal tower buzzer",
+          "signal_type": "power",
+          "direction": "out"
+        },
+        "12v_in": {
+          "function": "12V power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "12v_main"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "relay_board": {
+      "name": "8-Channel Relay Module (Active-Low, 5V)",
+      "type": "relay",
+      "description": "8-channel 5V relay board. Active-low logic (Pico GPIO LOW = relay energized). Loads TBD.",
+      "notes": "VCC: 5V. Logic input: active-low. Pico outputs 3.3V \u2014 verify optocoupler triggers at 3.3V before final wiring. Load assignments TBD.",
+      "pins": {
+        "VCC": {
+          "function": "5V power input",
+          "signal_type": "power",
+          "direction": "in",
+          "voltage_rail": "5v_logic"
+        },
+        "GND": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        },
+        "IN1": {
+          "function": "Relay 1 control (active-low)",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Load TBD"
+        },
+        "IN2": {
+          "function": "Relay 2 control (active-low)",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Load TBD"
+        },
+        "IN3": {
+          "function": "Relay 3 control (active-low)",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Load TBD"
+        },
+        "IN4": {
+          "function": "Relay 4 control (active-low)",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Load TBD"
+        },
+        "IN5": {
+          "function": "Relay 5 control (active-low)",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Load TBD"
+        },
+        "IN6": {
+          "function": "Relay 6 control (active-low)",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Load TBD"
+        },
+        "IN7": {
+          "function": "Relay 7 control (active-low)",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Load TBD"
+        },
+        "IN8": {
+          "function": "Relay 8 control (active-low)",
+          "signal_type": "digital_in",
+          "direction": "in",
+          "notes": "Load TBD"
+        }
+      }
+    },
+    "grove_led_left": {
+      "name": "Grove Variable Color LED V1.1 (Headlight Left)",
+      "type": "other",
+      "description": "Left headlight. 12V input via transistor board channel 1.",
+      "pins": {
+        "12v_in": {
+          "function": "12V power input (from transistor board)",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "grove_led_right": {
+      "name": "Grove Variable Color LED V1.1 (Headlight Right)",
+      "type": "other",
+      "description": "Right headlight. 12V input via transistor board channel 2.",
+      "pins": {
+        "12v_in": {
+          "function": "12V power input (from transistor board)",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "signal_tower": {
+      "name": "LED Signal Tower (2-Layer + Buzzer, 12V)",
+      "type": "other",
+      "description": "Industrial signal tower. 2 light layers + buzzer. 12V. Steady/flash switchable. Powered via transistor board channels 3\u20135.",
+      "pins": {
+        "layer1_in": {
+          "function": "Layer 1 12V input (from transistor board ch3)",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "layer2_in": {
+          "function": "Layer 2 12V input (from transistor board ch4)",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "buzzer_in": {
+          "function": "Buzzer 12V input (from transistor board ch5)",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "gnd": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    },
+    "estop_button": {
+      "name": "GCX1131 E-Stop Pushbutton (22mm, Twist-to-Release)",
+      "type": "passive",
+      "description": "Red mushroom 40mm twist-to-release E-stop. N.C. contact. Mounted in enclosure. Wired to BP-65 H/L signal input. NOT YET WIRED.",
+      "notes": "N.C. contact: closed during normal operation, opens when pressed. Wiring to BP-65 H/L TBD \u2014 circuit design needed.",
+      "pins": {
+        "nc_common": {
+          "function": "N.C. contact common",
+          "signal_type": "nc_contact",
+          "direction": "bidir"
+        },
+        "nc_contact": {
+          "function": "N.C. contact output",
+          "signal_type": "nc_contact",
+          "direction": "bidir"
+        }
+      }
+    },
+    "dso_2090": {
+      "name": "DSO-2090 USB Oscilloscope",
+      "type": "sensor",
+      "description": "2-channel USB oscilloscope. Monitors 5V and 12V power rails as ROS topics. Also used during assembly for signal verification. USB2, powered from hub.",
+      "notes": "Connected via 7-port hub. Hub provides power. Probe CH1 on 12V rail, CH2 on 5V rail.",
+      "pins": {
+        "usb": {
+          "function": "USB 2.0 to hub port 6",
+          "signal_type": "usb",
+          "direction": "bidir"
+        },
+        "ch1": {
+          "function": "Channel 1 probe \u2014 12V rail monitor",
+          "signal_type": "analog_in",
+          "direction": "in"
+        },
+        "ch2": {
+          "function": "Channel 2 probe \u2014 5V rail monitor",
+          "signal_type": "analog_in",
+          "direction": "in"
+        }
+      }
+    }
+  },
+  "connections": [
+    {
+      "id": "batt_pos_to_fuse",
+      "label": "BATT+ \u2192 40A Fuse",
+      "from": {
+        "component": "battery",
+        "pin": "pos"
+      },
+      "to": {
+        "component": "inline_fuse_40a",
+        "pin": "in"
+      },
+      "wire": {
+        "ref": "power_10awg_red",
+        "length_mm": 200
+      },
+      "assembly_order": 10,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter",
+        "notes": "Measure fuse output. Expect ~12V with battery connected."
+      }
+    },
+    {
+      "id": "fuse_to_xt60_pos",
+      "label": "Fuse OUT \u2192 XT60+",
+      "from": {
+        "component": "inline_fuse_40a",
+        "pin": "out"
+      },
+      "to": {
+        "component": "xt60_disconnect",
+        "pin": "pos"
+      },
+      "wire": {
+        "ref": "power_10awg_red",
+        "length_mm": 150
+      },
+      "assembly_order": 11,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "batt_neg_to_xt60_neg",
+      "label": "BATT\u2212 \u2192 XT60\u2212",
+      "from": {
+        "component": "battery",
+        "pin": "neg"
+      },
+      "to": {
+        "component": "xt60_disconnect",
+        "pin": "neg"
+      },
+      "wire": {
+        "ref": "power_10awg_black",
+        "length_mm": 200
+      },
+      "assembly_order": 12,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "xt60_pos_to_busbar",
+      "label": "XT60+ \u2192 Bus Bar positive stud",
+      "from": {
+        "component": "xt60_disconnect",
+        "pin": "pos"
+      },
+      "to": {
+        "component": "bus_bar",
+        "pin": "pos_stud"
+      },
+      "wire": {
+        "ref": "power_10awg_red",
+        "length_mm": 300
+      },
+      "assembly_order": 13,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter",
+        "notes": "Measure bus bar positive stud."
+      }
+    },
+    {
+      "id": "xt60_neg_to_busbar",
+      "label": "XT60\u2212 \u2192 Bus Bar negative stud",
+      "from": {
+        "component": "xt60_disconnect",
+        "pin": "neg"
+      },
+      "to": {
+        "component": "bus_bar",
+        "pin": "neg_stud"
+      },
+      "wire": {
+        "ref": "power_10awg_black",
+        "length_mm": 300
+      },
+      "assembly_order": 14,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "busbar_to_bp65_in",
+      "label": "Bus Bar+ \u2192 BP-65 IN+",
+      "from": {
+        "component": "bus_bar",
+        "pin": "pos_stud"
+      },
+      "to": {
+        "component": "bp65",
+        "pin": "in_pos"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 20,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "busbar_neg_to_bp65_neg",
+      "label": "Bus Bar\u2212 \u2192 BP-65 IN\u2212",
+      "from": {
+        "component": "bus_bar",
+        "pin": "neg_stud"
+      },
+      "to": {
+        "component": "bp65",
+        "pin": "in_neg"
+      },
+      "wire": {
+        "ref": "power_18awg_black"
+      },
+      "assembly_order": 21,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "busbar_to_jetson_12v",
+      "label": "Bus Bar+ \u2192 Jetson 12V",
+      "from": {
+        "component": "bus_bar",
+        "pin": "pos_stud"
+      },
+      "to": {
+        "component": "jetson",
+        "pin": "12v_in"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 22,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter",
+        "notes": "Measure Jetson DC barrel jack before connecting."
+      }
+    },
+    {
+      "id": "bp65_out_to_stepdown_12v",
+      "label": "BP-65 OUT+ \u2192 Step-Down 12V IN",
+      "from": {
+        "component": "bp65",
+        "pin": "out_pos"
+      },
+      "to": {
+        "component": "step_down_5v",
+        "pin": "vin"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 30,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "bp65_out_to_pololu_24v12_12v",
+      "label": "BP-65 OUT+ \u2192 Pololu 24v12 VIN",
+      "from": {
+        "component": "bp65",
+        "pin": "out_pos"
+      },
+      "to": {
+        "component": "pololu_24v12",
+        "pin": "vin"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 31,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "bp65_out_to_jrk_12v",
+      "label": "BP-65 OUT+ \u2192 Jrk G2 VIN",
+      "from": {
+        "component": "bp65",
+        "pin": "out_pos"
+      },
+      "to": {
+        "component": "pololu_jrk_g2",
+        "pin": "vin"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 32,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "bp65_out_to_transistor_12v",
+      "label": "BP-65 OUT+ \u2192 Transistor Board 12V",
+      "from": {
+        "component": "bp65",
+        "pin": "out_pos"
+      },
+      "to": {
+        "component": "transistor_board",
+        "pin": "12v_in"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 33,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "bp65_out_to_usb_charger",
+      "label": "BP-65 OUT+ \u2192 USB Field Charger 12V",
+      "from": {
+        "component": "bp65",
+        "pin": "out_pos"
+      },
+      "to": {
+        "component": "usb_charger",
+        "pin": "vin"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 34,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "stepdown_5v_to_pi4",
+      "label": "5V Step-Down \u2192 Pi4 USB-C power",
+      "from": {
+        "component": "step_down_5v",
+        "pin": "vout"
+      },
+      "to": {
+        "component": "pi4",
+        "pin": "usbc_power"
+      },
+      "wire": {
+        "ref": "signal_22awg_red"
+      },
+      "assembly_order": 40,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 5,
+        "tolerance": 0.25,
+        "instrument": "multimeter",
+        "notes": "Measure Pi4 USB-C power pins. Expect 5V \u00b1 0.25V."
+      }
+    },
+    {
+      "id": "stepdown_5v_to_pico_vsys",
+      "label": "5V Step-Down \u2192 Pico VSYS",
+      "from": {
+        "component": "step_down_5v",
+        "pin": "vout"
+      },
+      "to": {
+        "component": "pico",
+        "pin": "VSYS"
+      },
+      "wire": {
+        "ref": "signal_22awg_red"
+      },
+      "assembly_order": 41,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 5,
+        "tolerance": 0.25,
+        "instrument": "multimeter",
+        "notes": "Measure Pico VSYS (pin 39)."
+      }
+    },
+    {
+      "id": "stepdown_5v_to_relay_vcc",
+      "label": "5V Step-Down \u2192 Relay Board VCC",
+      "from": {
+        "component": "step_down_5v",
+        "pin": "vout"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "VCC"
+      },
+      "wire": {
+        "ref": "signal_22awg_red"
+      },
+      "assembly_order": 42,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 5,
+        "tolerance": 0.25,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "stepdown_5v_to_rc_receiver",
+      "label": "5V Step-Down \u2192 RC Receiver VCC",
+      "from": {
+        "component": "step_down_5v",
+        "pin": "vout"
+      },
+      "to": {
+        "component": "rc_receiver",
+        "pin": "vcc"
+      },
+      "wire": {
+        "ref": "signal_22awg_red"
+      },
+      "assembly_order": 43,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 5,
+        "tolerance": 0.25,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "enc_left_vcc",
+      "label": "ENC_LEFT_VCC",
+      "from": {
+        "component": "pico",
+        "pin": "3V3_OUT"
+      },
+      "to": {
+        "component": "as5600_left",
+        "pin": "VCC"
+      },
+      "wire": {
+        "ref": "signal_26awg_red"
+      },
+      "assembly_order": 100,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 3.3,
+        "tolerance": 0.1,
+        "instrument": "multimeter",
+        "notes": "Measure at encoder VCC pad with Pico powered."
+      }
+    },
+    {
+      "id": "enc_left_gnd",
+      "label": "ENC_LEFT_GND",
+      "from": {
+        "component": "pico",
+        "pin": "GND"
+      },
+      "to": {
+        "component": "as5600_left",
+        "pin": "GND"
+      },
+      "wire": {
+        "ref": "signal_26awg_black"
+      },
+      "assembly_order": 101,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "enc_left_sda",
+      "label": "ENC_LEFT_SDA",
+      "from": {
+        "component": "pico",
+        "pin": "GP4"
+      },
+      "to": {
+        "component": "as5600_left",
+        "pin": "SDA"
+      },
+      "wire": {
+        "ref": "signal_26awg_blue"
+      },
+      "assembly_order": 102,
+      "commissioning": {
+        "test_method": "i2c_scan",
+        "expected_value": "0x36",
+        "instrument": "software",
+        "notes": "Scan I2C0 bus (GP4/GP5). Expect AS5600 at 0x36."
+      }
+    },
+    {
+      "id": "enc_left_scl",
+      "label": "ENC_LEFT_SCL",
+      "from": {
+        "component": "pico",
+        "pin": "GP5"
+      },
+      "to": {
+        "component": "as5600_left",
+        "pin": "SCL"
+      },
+      "wire": {
+        "ref": "signal_26awg_yellow"
+      },
+      "assembly_order": 103,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "Verified as part of I2C scan in enc_left_sda test."
+      }
+    },
+    {
+      "id": "enc_right_vcc",
+      "label": "ENC_RIGHT_VCC",
+      "from": {
+        "component": "pico",
+        "pin": "3V3_OUT"
+      },
+      "to": {
+        "component": "as5600_right",
+        "pin": "VCC"
+      },
+      "wire": {
+        "ref": "signal_26awg_red"
+      },
+      "assembly_order": 110,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 3.3,
+        "tolerance": 0.1,
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "enc_right_gnd",
+      "label": "ENC_RIGHT_GND",
+      "from": {
+        "component": "pico",
+        "pin": "GND"
+      },
+      "to": {
+        "component": "as5600_right",
+        "pin": "GND"
+      },
+      "wire": {
+        "ref": "signal_26awg_black"
+      },
+      "assembly_order": 111,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "enc_right_sda",
+      "label": "ENC_RIGHT_SDA",
+      "from": {
+        "component": "pico",
+        "pin": "GP6"
+      },
+      "to": {
+        "component": "as5600_right",
+        "pin": "SDA"
+      },
+      "wire": {
+        "ref": "signal_26awg_blue"
+      },
+      "assembly_order": 112,
+      "commissioning": {
+        "test_method": "i2c_scan",
+        "expected_value": "0x36",
+        "instrument": "software",
+        "notes": "Scan I2C1 bus (GP6/GP7). Expect AS5600 at 0x36."
+      }
+    },
+    {
+      "id": "enc_right_scl",
+      "label": "ENC_RIGHT_SCL",
+      "from": {
+        "component": "pico",
+        "pin": "GP7"
+      },
+      "to": {
+        "component": "as5600_right",
+        "pin": "SCL"
+      },
+      "wire": {
+        "ref": "signal_26awg_yellow"
+      },
+      "assembly_order": 113,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none"
+      }
+    },
+    {
+      "id": "ibus_rx",
+      "label": "RC_IBUS",
+      "from": {
+        "component": "rc_receiver",
+        "pin": "ibus"
+      },
+      "to": {
+        "component": "pico",
+        "pin": "GP9"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 120,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software",
+        "notes": "Verify iBUS packets received on UART1. Power transmitter, check Pico receives channel data."
+      }
+    },
+    {
+      "id": "rc_estop_direct",
+      "label": "RC_ESTOP_DIRECT",
+      "from": {
+        "component": "rc_receiver",
+        "pin": "pwm_ch6"
+      },
+      "to": {
+        "component": "pololu_24v12",
+        "pin": "rc_in"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 121,
+      "notes": "Hardware E-stop. RC ch6 low = motor stop. Independent of software stack.",
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "Verify by commanding E-stop from transmitter and confirming motor controller stops."
+      }
+    },
+    {
+      "id": "relay_gnd",
+      "label": "RELAY_GND",
+      "from": {
+        "component": "pico",
+        "pin": "GND"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "GND"
+      },
+      "wire": {
+        "ref": "signal_22awg_black"
+      },
+      "assembly_order": 130,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "relay_in1",
+      "label": "RELAY_IN1",
+      "from": {
+        "component": "pico",
+        "pin": "GP10"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "IN1"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 131,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software",
+        "notes": "Drive GP10 LOW, relay 1 should click and LED illuminate."
+      }
+    },
+    {
+      "id": "relay_in2",
+      "label": "RELAY_IN2",
+      "from": {
+        "component": "pico",
+        "pin": "GP11"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "IN2"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 132,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software"
+      }
+    },
+    {
+      "id": "relay_in3",
+      "label": "RELAY_IN3",
+      "from": {
+        "component": "pico",
+        "pin": "GP12"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "IN3"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 133,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software"
+      }
+    },
+    {
+      "id": "relay_in4",
+      "label": "RELAY_IN4",
+      "from": {
+        "component": "pico",
+        "pin": "GP13"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "IN4"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 134,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software"
+      }
+    },
+    {
+      "id": "relay_in5",
+      "label": "RELAY_IN5",
+      "from": {
+        "component": "pico",
+        "pin": "GP14"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "IN5"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 135,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software"
+      }
+    },
+    {
+      "id": "relay_in6",
+      "label": "RELAY_IN6",
+      "from": {
+        "component": "pico",
+        "pin": "GP15"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "IN6"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 136,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software"
+      }
+    },
+    {
+      "id": "relay_in7",
+      "label": "RELAY_IN7",
+      "from": {
+        "component": "pico",
+        "pin": "GP16"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "IN7"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 137,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software"
+      }
+    },
+    {
+      "id": "relay_in8",
+      "label": "RELAY_IN8",
+      "from": {
+        "component": "pico",
+        "pin": "GP17"
+      },
+      "to": {
+        "component": "relay_board",
+        "pin": "IN8"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 138,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software"
+      }
+    },
+    {
+      "id": "headlight_left_pwm",
+      "label": "HEADLIGHT_LEFT_PWM",
+      "from": {
+        "component": "pico",
+        "pin": "GP18"
+      },
+      "to": {
+        "component": "transistor_board",
+        "pin": "ch1_in"
+      },
+      "wire": {
+        "ref": "signal_26awg_orange"
+      },
+      "assembly_order": 140,
+      "commissioning": {
+        "test_method": "pwm_measure",
+        "instrument": "oscilloscope",
+        "notes": "Measure transistor board ch1_in with DSO-2090. Drive GP18 PWM, verify signal present."
+      }
+    },
+    {
+      "id": "headlight_right_pwm",
+      "label": "HEADLIGHT_RIGHT_PWM",
+      "from": {
+        "component": "pico",
+        "pin": "GP19"
+      },
+      "to": {
+        "component": "transistor_board",
+        "pin": "ch2_in"
+      },
+      "wire": {
+        "ref": "signal_26awg_orange"
+      },
+      "assembly_order": 141,
+      "commissioning": {
+        "test_method": "pwm_measure",
+        "instrument": "oscilloscope"
+      }
+    },
+    {
+      "id": "signal_tower_l1_pwm",
+      "label": "SIGNAL_TOWER_L1_PWM",
+      "from": {
+        "component": "pico",
+        "pin": "GP20"
+      },
+      "to": {
+        "component": "transistor_board",
+        "pin": "ch3_in"
+      },
+      "wire": {
+        "ref": "signal_26awg_orange"
+      },
+      "assembly_order": 142,
+      "commissioning": {
+        "test_method": "pwm_measure",
+        "instrument": "oscilloscope"
+      }
+    },
+    {
+      "id": "signal_tower_l2_pwm",
+      "label": "SIGNAL_TOWER_L2_PWM",
+      "from": {
+        "component": "pico",
+        "pin": "GP21"
+      },
+      "to": {
+        "component": "transistor_board",
+        "pin": "ch4_in"
+      },
+      "wire": {
+        "ref": "signal_26awg_orange"
+      },
+      "assembly_order": 143,
+      "commissioning": {
+        "test_method": "pwm_measure",
+        "instrument": "oscilloscope"
+      }
+    },
+    {
+      "id": "signal_tower_buzzer_pwm",
+      "label": "SIGNAL_TOWER_BUZZER_PWM",
+      "from": {
+        "component": "pico",
+        "pin": "GP22"
+      },
+      "to": {
+        "component": "transistor_board",
+        "pin": "ch5_in"
+      },
+      "wire": {
+        "ref": "signal_26awg_orange"
+      },
+      "assembly_order": 144,
+      "commissioning": {
+        "test_method": "pwm_measure",
+        "instrument": "oscilloscope"
+      }
+    },
+    {
+      "id": "transistor_ch1_to_headlight_left",
+      "from": {
+        "component": "transistor_board",
+        "pin": "ch1_out"
+      },
+      "to": {
+        "component": "grove_led_left",
+        "pin": "12v_in"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 150,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter",
+        "notes": "With GP18 driven HIGH, measure LED supply. Expect ~12V."
+      },
+      "label": "HEADLIGHT_LEFT_12V"
+    },
+    {
+      "id": "transistor_ch2_to_headlight_right",
+      "from": {
+        "component": "transistor_board",
+        "pin": "ch2_out"
+      },
+      "to": {
+        "component": "grove_led_right",
+        "pin": "12v_in"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 151,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      },
+      "label": "HEADLIGHT_RIGHT_12V"
+    },
+    {
+      "id": "transistor_ch3_to_tower_l1",
+      "from": {
+        "component": "transistor_board",
+        "pin": "ch3_out"
+      },
+      "to": {
+        "component": "signal_tower",
+        "pin": "layer1_in"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 152,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      },
+      "label": "TOWER_L1_12V"
+    },
+    {
+      "id": "transistor_ch4_to_tower_l2",
+      "from": {
+        "component": "transistor_board",
+        "pin": "ch4_out"
+      },
+      "to": {
+        "component": "signal_tower",
+        "pin": "layer2_in"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 153,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 12,
+        "tolerance": 1,
+        "instrument": "multimeter"
+      },
+      "label": "TOWER_L2_12V"
+    },
+    {
+      "id": "transistor_ch5_to_tower_buzzer",
+      "from": {
+        "component": "transistor_board",
+        "pin": "ch5_out"
+      },
+      "to": {
+        "component": "signal_tower",
+        "pin": "buzzer_in"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 154,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software",
+        "notes": "Drive GP22 HIGH, buzzer should sound."
+      },
+      "label": "TOWER_BUZZER_12V"
+    },
+    {
+      "id": "pico_reset",
+      "label": "PI4_PICO_RESET",
+      "from": {
+        "component": "pi4",
+        "pin": "gpio_pico_reset"
+      },
+      "to": {
+        "component": "pico",
+        "pin": "RUN"
+      },
+      "wire": {
+        "ref": "signal_26awg_white",
+        "notes": "1k\u03a9 series resistor inline on this wire."
+      },
+      "assembly_order": 160,
+      "commissioning": {
+        "test_method": "gpio_toggle",
+        "instrument": "software",
+        "notes": "Pi4 drives GPIO17 LOW, Pico should reset (USB disconnect/reconnect observable)."
+      }
+    },
+    {
+      "id": "pico_usb_to_pi4",
+      "label": "PICO_MICROROS",
+      "from": {
+        "component": "pico",
+        "pin": "USB"
+      },
+      "to": {
+        "component": "pi4",
+        "pin": "usb_a_2"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "white",
+        "notes": "USB micro-B to USB-A cable."
+      },
+      "assembly_order": 161,
+      "commissioning": {
+        "test_method": "uart_loopback",
+        "instrument": "software",
+        "notes": "Verify Pico appears as /dev/ttyACM* on Pi4. Run micro-ROS agent and confirm node appears."
+      }
+    },
+    {
+      "id": "pi4_to_hub",
+      "label": "PI4_USB_HUB",
+      "from": {
+        "component": "pi4",
+        "pin": "usb_a_1"
+      },
+      "to": {
+        "component": "usb_hub",
+        "pin": "upstream"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black",
+        "notes": "USB 3.0 A-to-A or A-to-B cable."
+      },
+      "assembly_order": 170,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "Verify hub appears on Pi4: lsusb should show VIA Labs hub."
+      }
+    },
+    {
+      "id": "hub_to_pololu_24v12",
+      "from": {
+        "component": "usb_hub",
+        "pin": "port1"
+      },
+      "to": {
+        "component": "pololu_24v12",
+        "pin": "usb"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black"
+      },
+      "assembly_order": 171,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "lsusb: expect Pololu Simple High-Power Motor Controller 24v12"
+      },
+      "label": "HUB_MOTOR_DRIVE_USB"
+    },
+    {
+      "id": "hub_to_jrk_g2",
+      "from": {
+        "component": "usb_hub",
+        "pin": "port2"
+      },
+      "to": {
+        "component": "pololu_jrk_g2",
+        "pin": "usb"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black"
+      },
+      "assembly_order": 172,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "lsusb: expect Pololu Jrk G2 21v3 (two ACM interfaces)"
+      },
+      "label": "HUB_STEERING_USB"
+    },
+    {
+      "id": "hub_to_ps3_eye_1",
+      "from": {
+        "component": "usb_hub",
+        "pin": "port3"
+      },
+      "to": {
+        "component": "ps3_eye_1",
+        "pin": "usb"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black"
+      },
+      "assembly_order": 173,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none"
+      },
+      "label": "HUB_HAZCAM1_USB"
+    },
+    {
+      "id": "hub_to_ps3_eye_2",
+      "from": {
+        "component": "usb_hub",
+        "pin": "port4"
+      },
+      "to": {
+        "component": "ps3_eye_2",
+        "pin": "usb"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black"
+      },
+      "assembly_order": 174,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none"
+      },
+      "label": "HUB_HAZCAM2_USB"
+    },
+    {
+      "id": "hub_to_ps3_eye_3",
+      "from": {
+        "component": "usb_hub",
+        "pin": "port5"
+      },
+      "to": {
+        "component": "ps3_eye_3",
+        "pin": "usb"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black"
+      },
+      "assembly_order": 175,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none"
+      },
+      "label": "HUB_HAZCAM3_USB"
+    },
+    {
+      "id": "hub_to_dso2090",
+      "from": {
+        "component": "usb_hub",
+        "pin": "port6"
+      },
+      "to": {
+        "component": "dso_2090",
+        "pin": "usb"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black"
+      },
+      "assembly_order": 176,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "lsusb: expect DSO-2090. Verify power rail monitoring ROS topic publishes."
+      },
+      "label": "HUB_DSO2090_USB"
+    },
+    {
+      "id": "pi4_to_oak_d",
+      "from": {
+        "component": "pi4",
+        "pin": "usb_a_3"
+      },
+      "to": {
+        "component": "oak_d",
+        "pin": "usb"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black",
+        "notes": "USB 3.0 direct to Pi4, not via hub \u2014 bandwidth requirement."
+      },
+      "assembly_order": 177,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "Verify OAK-D publishes depth and IMU topics."
+      },
+      "label": "PI4_OAKD_USB"
+    },
+    {
+      "id": "jetson_to_logitech",
+      "from": {
+        "component": "jetson",
+        "pin": "usb_a_1"
+      },
+      "to": {
+        "component": "logitech_c910",
+        "pin": "usb"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "black"
+      },
+      "assembly_order": 178,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none"
+      },
+      "label": "JETSON_LOGITECH_USB"
+    },
+    {
+      "id": "pi4_eth_to_switch",
+      "from": {
+        "component": "pi4",
+        "pin": "eth"
+      },
+      "to": {
+        "component": "unifi_switch",
+        "pin": "port3"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "blue",
+        "notes": "CAT6 ethernet patch cable."
+      },
+      "assembly_order": 180,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "Ping Pi4 from Jetson to verify switch routing."
+      },
+      "label": "PI4_ETH"
+    },
+    {
+      "id": "jetson_eth_to_switch",
+      "from": {
+        "component": "jetson",
+        "pin": "eth"
+      },
+      "to": {
+        "component": "unifi_switch",
+        "pin": "port2"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "blue",
+        "notes": "CAT6 ethernet patch cable."
+      },
+      "assembly_order": 181,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none"
+      },
+      "label": "JETSON_ETH"
+    },
+    {
+      "id": "switch_to_ap",
+      "from": {
+        "component": "unifi_switch",
+        "pin": "port1"
+      },
+      "to": {
+        "component": "unifi_ap",
+        "pin": "eth"
+      },
+      "wire": {
+        "gauge_awg": 24,
+        "color": "blue",
+        "notes": "CAT6 ethernet patch cable."
+      },
+      "assembly_order": 182,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "Verify WiFi SSID visible and devices can connect."
+      },
+      "label": "SWITCH_AP_ETH"
+    },
+    {
+      "id": "steering_pot_vcc",
+      "from": {
+        "component": "step_down_5v",
+        "pin": "vout"
+      },
+      "to": {
+        "component": "steering_pot",
+        "pin": "vcc"
+      },
+      "wire": {
+        "ref": "signal_26awg_red"
+      },
+      "assembly_order": 190,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 5,
+        "tolerance": 0.25,
+        "instrument": "multimeter"
+      },
+      "label": "STEERING_POT_VCC"
+    },
+    {
+      "id": "steering_pot_gnd",
+      "from": {
+        "component": "bus_bar",
+        "pin": "neg_stud"
+      },
+      "to": {
+        "component": "steering_pot",
+        "pin": "gnd"
+      },
+      "wire": {
+        "ref": "signal_26awg_black"
+      },
+      "assembly_order": 191,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      },
+      "label": "STEERING_POT_GND"
+    },
+    {
+      "id": "steering_pot_to_jrk_feedback",
+      "label": "STEERING_FEEDBACK",
+      "from": {
+        "component": "steering_pot",
+        "pin": "wiper"
+      },
+      "to": {
+        "component": "pololu_jrk_g2",
+        "pin": "feedback"
+      },
+      "wire": {
+        "ref": "signal_26awg_white"
+      },
+      "assembly_order": 192,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 2.5,
+        "tolerance": 2.4,
+        "instrument": "multimeter",
+        "notes": "Move steering through full range. Voltage should sweep 0\u20135V smoothly."
+      }
+    },
+    {
+      "id": "charger_ac_from_inlet",
+      "from": {
+        "component": "shore_inlet",
+        "pin": "hot"
+      },
+      "to": {
+        "component": "charger",
+        "pin": "ac_in"
+      },
+      "wire": {
+        "gauge_awg": 14,
+        "color": "black",
+        "notes": "14AWG 3-conductor AC cable. Shore power only \u2014 disconnect before operating robot."
+      },
+      "assembly_order": 200,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none",
+        "notes": "Test with shore power connected: verify charger LED shows bulk/absorption charge mode."
+      },
+      "label": "SHORE_AC_HOT"
+    },
+    {
+      "id": "charger_dc_to_battery",
+      "from": {
+        "component": "charger",
+        "pin": "dc_pos"
+      },
+      "to": {
+        "component": "battery",
+        "pin": "pos"
+      },
+      "wire": {
+        "ref": "power_18awg_red"
+      },
+      "assembly_order": 201,
+      "commissioning": {
+        "test_method": "none",
+        "instrument": "none"
+      },
+      "label": "CHARGER_DC_POS"
+    }
+  ],
+  "bom_overrides": [
+    {
+      "description": "4.7k\u03a9 resistor \u2014 I2C0 SDA pull-up (GP4)",
+      "qty": 1,
+      "unit": "ea"
+    },
+    {
+      "description": "4.7k\u03a9 resistor \u2014 I2C0 SCL pull-up (GP5)",
+      "qty": 1,
+      "unit": "ea"
+    },
+    {
+      "description": "4.7k\u03a9 resistor \u2014 I2C1 SDA pull-up (GP6)",
+      "qty": 1,
+      "unit": "ea"
+    },
+    {
+      "description": "4.7k\u03a9 resistor \u2014 I2C1 SCL pull-up (GP7)",
+      "qty": 1,
+      "unit": "ea"
+    },
+    {
+      "description": "1k\u03a9 resistor \u2014 Pico RUN reset line (Pi4 GPIO17 \u2192 Pico RUN)",
+      "qty": 1,
+      "unit": "ea"
+    },
+    {
+      "description": "Ring terminal \u2014 10AWG (bus bar stud connections)",
+      "qty": 6,
+      "unit": "ea"
+    },
+    {
+      "description": "Ring terminal \u2014 18AWG (bus bar branch connections)",
+      "qty": 10,
+      "unit": "ea"
+    },
+    {
+      "description": "XT60 connector pair (male + female)",
+      "qty": 1,
+      "unit": "pair"
+    },
+    {
+      "description": "JST-PH 4-pin housing + crimps (encoder connectors)",
+      "qty": 2,
+      "unit": "ea"
+    },
+    {
+      "description": "Heat shrink assortment",
+      "qty": 1,
+      "unit": "pack"
+    }
+  ]
+}

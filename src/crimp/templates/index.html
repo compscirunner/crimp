@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Assembly Guide{% endblock %}
+
+{% block sidebar_nav %}
+{% for phase in phases %}
+<div class="phase-nav">
+  <div class="phase-nav-label">{{ phase.name }}</div>
+  {% for conn in phase.connections %}
+  <a href="#{{ conn.id }}"
+     class="{{ 'active' if state.get(conn.id) == 'pass' else '' }}">
+    {% if state.get(conn.id) == 'pass' %}✓{% elif state.get(conn.id) == 'fail' %}✗{% elif state.get(conn.id) == 'skip' %}–{% else %}·{% endif %}
+    {{ conn.label | truncate(28, true) }}
+  </a>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Assembly Guide</h2>
+  <div class="meta">
+    {{ total }} wire runs &nbsp;·&nbsp; {{ tested }} with commissioning tests
+    &nbsp;·&nbsp; {{ components }} components
+  </div>
+</div>
+
+{% set step_num = namespace(n=1) %}
+{% for phase in phases %}
+<div class="phase-section" id="phase-{{ loop.index }}">
+  <div class="phase-title">{{ phase.name }}</div>
+
+  {% for conn in phase.connections %}
+  {% set status = state.get(conn.id, 'pending') %}
+  <div class="step-card {{ status if status != 'pending' else '' }}"
+       id="card-{{ conn.id }}">
+
+    <div class="step-header" onclick="toggleBody('{{ conn.id }}')">
+      <span class="step-num">#{{ step_num.n }}</span>
+      <span class="step-label">{{ conn.label }}</span>
+      {% if conn.wire_color %}
+      <span class="wire-badge" style="border-color: {{ conn.wire_color_css }}; color: {{ conn.wire_color_css }}">
+        {{ conn.wire_gauge }} AWG · {{ conn.wire_color }}
+      </span>
+      {% endif %}
+      <span class="step-status">
+        {% if status == 'pass' %}✅
+        {% elif status == 'fail' %}❌
+        {% elif status == 'skip' %}⏭
+        {% else %}○{% endif %}
+      </span>
+    </div>
+
+    <div class="step-body" id="body-{{ conn.id }}"
+         style="{{ 'display:none' if status == 'pass' else '' }}">
+
+      <div class="endpoint-grid">
+        <span class="lbl">From</span>
+        <span class="val">
+          <code>{{ conn.from_component }}</code> · <code>{{ conn.from_pin }}</code>
+          <span style="color:var(--text-dim);font-size:0.9rem;"> ({{ conn.from_name }})</span>
+        </span>
+        <span class="lbl">To</span>
+        <span class="val">
+          <code>{{ conn.to_component }}</code> · <code>{{ conn.to_pin }}</code>
+          <span style="color:var(--text-dim);font-size:0.9rem;"> ({{ conn.to_name }})</span>
+        </span>
+        {% if conn.wire_length_mm %}
+        <span class="lbl">Length</span>
+        <span class="val">{{ conn.wire_length_mm }} mm</span>
+        {% endif %}
+      </div>
+
+      {% if conn.test_method and conn.test_method != 'none' %}
+      <div class="test-box">
+        <div class="test-method">{{ conn.test_method }}</div>
+        {% if conn.test_notes %}
+        <div class="test-notes">{{ conn.test_notes }}</div>
+        {% endif %}
+        {% if conn.expected_value is not none %}
+        <div class="test-expected">Expected: {{ conn.expected_value }}
+          {% if conn.tolerance %} ± {{ conn.tolerance }}{% endif %}
+          {% if conn.instrument and conn.instrument != 'none' %} · {{ conn.instrument }}{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if conn.notes %}
+      <div class="step-notes">{{ conn.notes }}</div>
+      {% endif %}
+
+      <div class="btn-row" id="btns-{{ conn.id }}">
+        <button class="btn btn-pass"
+                hx-post="/step/{{ conn.id }}/pass"
+                hx-target="#card-{{ conn.id }}"
+                hx-swap="outerHTML"
+                hx-on::after-request="updateSummary()">
+          ✓ Pass
+        </button>
+        <button class="btn btn-fail"
+                hx-post="/step/{{ conn.id }}/fail"
+                hx-target="#card-{{ conn.id }}"
+                hx-swap="outerHTML"
+                hx-on::after-request="updateSummary()">
+          ✗ Fail
+        </button>
+        <button class="btn btn-skip"
+                hx-post="/step/{{ conn.id }}/skip"
+                hx-target="#card-{{ conn.id }}"
+                hx-swap="outerHTML"
+                hx-on::after-request="updateSummary()">
+          Skip
+        </button>
+      </div>
+    </div>
+  </div>
+  {% set step_num.n = step_num.n + 1 %}
+  {% endfor %}
+</div>
+{% endfor %}
+
+<div style="height: 5rem;"></div><!-- space for summary bar -->
+
+<script>
+function toggleBody(id) {
+  const body = document.getElementById('body-' + id);
+  if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+}
+
+function updateSummary() {
+  fetch('/summary')
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('sb-pass').textContent = d.passed;
+      document.getElementById('sb-fail').textContent = d.failed;
+      document.getElementById('sb-skip').textContent = d.skipped;
+      document.getElementById('sb-pct').textContent  = d.pct + '%';
+      document.getElementById('progress-fill').style.width = d.pct + '%';
+      document.getElementById('progress-label').textContent =
+        d.done + ' / ' + d.total + ' complete';
+    });
+}
+</script>
+{% endblock %}

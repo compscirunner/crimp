@@ -41,13 +41,17 @@ def build(manifest, output, dry_run):
 
     from crimp.generators import assembly as assembly_gen
     from crimp.generators import bom as bom_gen
+    from crimp.generators import commissioning as comm_gen
     from crimp.generators import pinout as pinout_gen
+
+    tested = sum(1 for c in m.connections if c.commissioning.test_method != "none")
 
     if dry_run:
         console.print("[dim]dry-run: would write:[/dim]")
         console.print(f"  pinout/index.md + {len(m.components)} component files → {output_dir}/pinout/")
         console.print(f"  assembly-guide.md ({len(m.connections)} steps) → {output_dir}/")
         console.print(f"  bom.md ({len(m.components)} components) → {output_dir}/")
+        console.print(f"  commissioning_tests.py ({tested} tests) → {output_dir}/")
     else:
         written = pinout_gen.generate(m, output_dir)
         console.print(f"[green]✓[/green] Pinout docs: {len(written)} files → [bold]{output_dir}/pinout/[/bold]")
@@ -57,6 +61,9 @@ def build(manifest, output, dry_run):
 
         bom = bom_gen.generate(m, output_dir)
         console.print(f"[green]✓[/green] BOM: {len(m.components)} components → [bold]{bom}[/bold]")
+
+        comm = comm_gen.generate(m, output_dir)
+        console.print(f"[green]✓[/green] Commissioning tests: {tested} tests → [bold]{comm}[/bold]")
 
 
 @cli.command()

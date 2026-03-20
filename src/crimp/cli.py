@@ -65,6 +65,14 @@ def build(manifest, output, dry_run):
         comm = comm_gen.generate(m, output_dir)
         console.print(f"[green]✓[/green] Commissioning tests: {tested} tests → [bold]{comm}[/bold]")
 
+        try:
+            from crimp.generators import wireviz_gen
+            diagrams = wireviz_gen.generate(m, output_dir)
+            svg_count = sum(1 for p in diagrams if p.suffix == ".svg")
+            console.print(f"[green]✓[/green] Wiring diagrams: {svg_count} SVGs → [bold]{output_dir}/diagrams/[/bold]")
+        except RuntimeError:
+            console.print("[dim]  (wiring diagrams skipped — wireviz not installed)[/dim]")
+
 
 @cli.command()
 @click.argument("manifest", type=click.Path(exists=True))

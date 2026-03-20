@@ -89,7 +89,20 @@
                 "function":       { "type": "string", "description": "Human-readable pin function, e.g. 'I2C0 SDA', 'PWM output', '12V power in'" },
                 "signal_type": {
                   "type": "string",
-                  "enum": ["power", "ground", "digital_in", "digital_out", "analog_in", "analog_out", "i2c_sda", "i2c_scl", "uart_tx", "uart_rx", "pwm", "spi_mosi", "spi_miso", "spi_clk", "spi_cs", "reset", "other", "nc"]
+                  "enum": [
+                    "power", "ground", "ac_power",
+                    "digital_in", "digital_out",
+                    "analog_in", "analog_out",
+                    "i2c_sda", "i2c_scl",
+                    "uart_tx", "uart_rx",
+                    "pwm",
+                    "spi_mosi", "spi_miso", "spi_clk", "spi_cs",
+                    "usb", "ethernet",
+                    "motor_power",
+                    "nc_contact", "no_contact",
+                    "reset",
+                    "other", "nc"
+                  ]
                 },
                 "direction":      { "type": "string", "enum": ["in", "out", "bidir", "power", "nc"] },
                 "physical_label": { "type": "string", "description": "Label printed on the board, if any" },

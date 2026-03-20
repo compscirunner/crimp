@@ -39,14 +39,19 @@ def build(manifest, output, dry_run):
     console.print(f"  {len(m.components)} components, {len(m.connections)} connections")
     console.print()
 
+    from crimp.generators import assembly as assembly_gen
     from crimp.generators import pinout as pinout_gen
 
     if dry_run:
-        console.print("[dim]dry-run: would write pinout docs[/dim]")
+        console.print("[dim]dry-run: would write:[/dim]")
         console.print(f"  pinout/index.md + {len(m.components)} component files → {output_dir}/pinout/")
+        console.print(f"  assembly-guide.md ({len(m.connections)} steps) → {output_dir}/")
     else:
         written = pinout_gen.generate(m, output_dir)
         console.print(f"[green]✓[/green] Pinout docs: {len(written)} files → [bold]{output_dir}/pinout/[/bold]")
+
+        guide = assembly_gen.generate(m, output_dir)
+        console.print(f"[green]✓[/green] Assembly guide: {len(m.connections)} steps → [bold]{guide}[/bold]")
 
 
 @cli.command()

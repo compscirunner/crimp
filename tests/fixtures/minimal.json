@@ -1,0 +1,135 @@
+{
+  "crimp_version": "0.1.0",
+  "project": {
+    "name": "Minimal Test Project",
+    "description": "Simplest possible manifest for testing."
+  },
+  "wire_standards": {
+    "signal_26awg_red": {
+      "gauge_awg": 26,
+      "color": "red"
+    },
+    "signal_26awg_black": {
+      "gauge_awg": 26,
+      "color": "black"
+    }
+  },
+  "power_rails": {
+    "3v3": {
+      "voltage_nominal": 3.3,
+      "source_component": "pico",
+      "max_current_a": 0.3
+    }
+  },
+  "components": {
+    "pico": {
+      "name": "Raspberry Pi Pico",
+      "type": "mcu",
+      "description": "RP2040 microcontroller board",
+      "voltage_logic": 3.3,
+      "pins": {
+        "GP4": {
+          "function": "I2C0 SDA",
+          "signal_type": "i2c_sda",
+          "direction": "bidir",
+          "physical_label": "GP4"
+        },
+        "3V3_OUT": {
+          "function": "3.3V power output",
+          "signal_type": "power",
+          "direction": "power",
+          "physical_label": "3V3 OUT"
+        },
+        "GND": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power",
+          "physical_label": "GND"
+        }
+      }
+    },
+    "encoder1": {
+      "name": "AS5600 Magnetic Encoder",
+      "type": "sensor",
+      "description": "12-bit magnetic rotary position sensor",
+      "voltage_logic": 3.3,
+      "connector": {
+        "type": "JST-PH-4",
+        "position": "component_side",
+        "pin_order": ["VCC", "GND", "SDA", "SCL"]
+      },
+      "pins": {
+        "SDA": {
+          "function": "I2C data",
+          "signal_type": "i2c_sda",
+          "direction": "bidir"
+        },
+        "VCC": {
+          "function": "3.3V power in",
+          "signal_type": "power",
+          "direction": "in"
+        },
+        "GND": {
+          "function": "Ground",
+          "signal_type": "ground",
+          "direction": "power"
+        }
+      }
+    }
+  },
+  "connections": [
+    {
+      "id": "enc1_vcc",
+      "label": "ENC1_VCC",
+      "from": { "component": "pico", "pin": "3V3_OUT" },
+      "to":   { "component": "encoder1", "pin": "VCC" },
+      "wire": { "ref": "signal_26awg_red" },
+      "assembly_order": 1,
+      "commissioning": {
+        "test_method": "voltage",
+        "expected_value": 3.3,
+        "tolerance": 0.1,
+        "instrument": "multimeter",
+        "notes": "Measure at encoder VCC pad. Expect 3.3V ± 0.1V."
+      }
+    },
+    {
+      "id": "enc1_gnd",
+      "label": "ENC1_GND",
+      "from": { "component": "pico", "pin": "GND" },
+      "to":   { "component": "encoder1", "pin": "GND" },
+      "wire": { "ref": "signal_26awg_black" },
+      "assembly_order": 2,
+      "commissioning": {
+        "test_method": "continuity",
+        "instrument": "multimeter"
+      }
+    },
+    {
+      "id": "enc1_sda",
+      "label": "ENC1_SDA",
+      "from": { "component": "pico", "pin": "GP4" },
+      "to":   { "component": "encoder1", "pin": "SDA" },
+      "wire": { "gauge_awg": 26, "color": "blue" },
+      "assembly_order": 3,
+      "commissioning": {
+        "test_method": "i2c_scan",
+        "expected_value": "0x36",
+        "instrument": "software",
+        "notes": "Scan I2C0 bus, expect AS5600 at address 0x36."
+      }
+    }
+  ],
+  "bom_overrides": [
+    {
+      "description": "4.7kΩ resistor (I2C0 SDA pull-up)",
+      "qty": 1,
+      "unit": "ea"
+    },
+    {
+      "description": "4.7kΩ resistor (I2C0 SCL pull-up)",
+      "qty": 1,
+      "unit": "ea"
+    }
+  ]
+}
